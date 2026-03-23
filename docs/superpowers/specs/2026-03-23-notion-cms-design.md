@@ -93,6 +93,8 @@ Notion stores uploaded images as signed S3 URLs that expire after ~1 hour. To ha
 
 No image downloading or re-hosting required.
 
+**Note on `next/image` remote domains:** Notion's S3 bucket hostname may vary by workspace region. The three patterns listed in `next.config.ts` cover the common cases; if images fail to load, add the specific hostname seen in the error.
+
 ## Deployment / Auto-Update Flow
 
 1. User edits a project page in Notion
@@ -101,6 +103,10 @@ No image downloading or re-hosting required.
 4. zachbackas.com reflects the update
 
 Setup: one-time configuration of Notion automation + Vercel deploy hook (documented in implementation plan).
+
+**Important:** Notion automations only trigger on **database property changes** (e.g. Title, Year, Order), not on page body edits. If you only update a description or add/remove images inside the page body, the auto-deploy will not fire — the live site will refresh within 1 hour via ISR. To force an immediate deploy after a body-only edit, make a trivial property change (e.g. increment and restore Order) or trigger a manual redeploy from the Vercel dashboard.
+
+**Slug uniqueness:** Slugs are not enforced as unique by Notion. By convention each project must have a unique slug. If two projects share a slug, `getProject()` returns the first match. The implementation plan should include a note to check for duplicates when adding new projects.
 
 ## Out of Scope
 
