@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { funProjects } from "@/lib/data";
+import { getProjects, getProject } from "@/lib/notion";
 import ProjectDetail from "@/components/ProjectDetail";
 
+export const revalidate = 3600;
+
 export async function generateStaticParams() {
-  return funProjects.map((p) => ({ slug: p.slug }));
+  const projects = await getProjects("fun");
+  return projects.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -13,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const project = funProjects.find((p) => p.slug === slug);
+  const project = await getProject(slug);
   if (!project) return {};
   return { title: `${project.title} — Zach Backas` };
 }
@@ -24,7 +27,7 @@ export default async function FunProjectPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const project = funProjects.find((p) => p.slug === slug);
+  const project = await getProject(slug);
   if (!project) notFound();
 
   return <ProjectDetail item={project} backHref="/fun" />;
