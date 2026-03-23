@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import ProjectGrid from "@/components/ProjectGrid";
-import { photography } from "@/lib/data";
+import { getProjects } from "@/lib/notion";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Photography — Zach Backas",
 };
 
-export default function PhotographyPage() {
+export default async function PhotographyPage() {
+  const items = await getProjects("photography");
   return (
     <div>
-      <ProjectGrid items={photography} />
+      <ProjectGrid items={items} />
     </div>
   );
 }

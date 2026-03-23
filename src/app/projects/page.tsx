@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import ProjectGrid from "@/components/ProjectGrid";
-import { projects } from "@/lib/data";
+import { getProjects } from "@/lib/notion";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Projects — Zach Backas",
 };
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const items = await getProjects("projects");
   return (
     <div>
-      <ProjectGrid items={projects} />
+      <ProjectGrid items={items} />
     </div>
   );
 }
