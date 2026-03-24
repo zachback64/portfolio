@@ -1,10 +1,12 @@
-import { Client } from "@notionhq/client";
-import type {
-  PageObjectResponse,
-} from "@notionhq/client/build/src/api-endpoints";
-
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const token = process.env.NOTION_TOKEN!;
 const databaseId = process.env.NOTION_DATABASE_ID!;
+const API = "https://api.notion.com/v1";
+
+const headers = {
+  Authorization: `Bearer ${token}`,
+  "Content-Type": "application/json",
+  "Notion-Version": "2022-06-28",
+};
 
 export interface Project {
   id: string;
@@ -17,106 +19,104 @@ export interface Project {
   images: string[];
 }
 
+type RichText = { plain_text: string }[];
+type NotionPage = {
+  object: string;
+  id: string;
+  cover: { type: string; external?: { url: string }; file?: { url: string } } | null;
+  properties: {
+    Title: { type: "title"; title: RichText };
+    Slug: { type: "rich_text"; rich_text: RichText };
+    Category: { type: "select"; select: { name: string } | null };
+    Year: { type: "number"; number: number | null };
+  };
+};
+
+type NotionBlock = {
+  type: string;
+  paragraph?: { rich_text: RichText };
+  image?: {
+    type: string;
+    external?: { url: string };
+    file?: { url: string };
+  };
+};
+
+async function queryDatabase(filter: unknown, sorts?: unknown): Promise<NotionPage[]> {
+  const res = await fetch(`${API}/databases/${databaseId}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ filter, sorts }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Notion query failed ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  return data.results.filter((p: NotionPage) => p.object === "page");
+}
+
+async function getBlocks(blockId: string): Promise<NotionBlock[]> {
+  const res = await fetch(`${API}/blocks/${blockId}/children`, { headers });
+  if (!res.ok) throw new Error(`Notion blocks failed ${res.status}`);
+  const data = await res.json();
+  return data.results;
+}
+
+function pageToProject(page: NotionPage): Project {
+  const props = page.properties;
+  const title = props.Title.title.map((t) => t.plain_text).join("");
+  const slug = props.Slug.rich_text.map((t) => t.plain_text).join("");
+  const category = props.Category.select?.name ?? "";
+  const year = props.Year.number ?? undefined;
+  const coverImage = page.cover
+    ? page.cover.type === "external"
+      ? page.cover.external?.url
+      : page.cover.file?.url
+    : undefined;
+  return { id: page.id, slug, title, year, category, description: "", images: [], coverImage };
+}
+
 export async function getProjects(category: string): Promise<Project[]> {
-  const response = await notion.dataSources.query({
-    data_source_id: databaseId,
-    filter: {
+  const pages = await queryDatabase(
+    {
       and: [
         { property: "Category", select: { equals: category } },
         { property: "Published", checkbox: { equals: true } },
       ],
     },
-    sorts: [{ property: "Order", direction: "ascending" }],
-  });
-
-  return response.results
-    .filter((page): page is PageObjectResponse => page.object === "page")
-    .map(pageToProject);
+    [{ property: "Order", direction: "ascending" }]
+  );
+  return pages.map(pageToProject);
 }
 
 export async function getProject(slug: string): Promise<Project | null> {
-  const response = await notion.dataSources.query({
-    data_source_id: databaseId,
-    filter: {
-      and: [
-        { property: "Slug", rich_text: { equals: slug } },
-        { property: "Published", checkbox: { equals: true } },
-      ],
-    },
+  const pages = await queryDatabase({
+    and: [
+      { property: "Slug", rich_text: { equals: slug } },
+      { property: "Published", checkbox: { equals: true } },
+    ],
   });
-
-  const page = response.results.find(
-    (p): p is PageObjectResponse => p.object === "page"
-  );
-  if (!page) return null;
-
-  const blocks = await notion.blocks.children.list({ block_id: page.id });
+  if (pages.length === 0) return null;
+  const page = pages[0];
+  const blocks = await getBlocks(page.id);
 
   let description = "";
   const images: string[] = [];
 
-  for (const block of blocks.results) {
-    if (!("type" in block)) continue;
-    if (block.type === "paragraph") {
-      const text = block.paragraph.rich_text
-        .map((t) => t.plain_text)
-        .join("");
+  for (const block of blocks) {
+    if (block.type === "paragraph" && block.paragraph) {
+      const text = block.paragraph.rich_text.map((t) => t.plain_text).join("");
       if (text && !description) description = text;
-    } else if (block.type === "image") {
+    } else if (block.type === "image" && block.image) {
       const url =
         block.image.type === "external"
-          ? block.image.external.url
-          : block.image.file.url;
-      images.push(url);
+          ? block.image.external?.url
+          : block.image.file?.url;
+      if (url) images.push(url);
     }
   }
 
   const base = pageToProject(page);
-  return {
-    ...base,
-    description,
-    images,
-    coverImage: base.coverImage ?? images[0],
-  };
-}
-
-function pageToProject(page: PageObjectResponse): Project {
-  const props = page.properties;
-
-  const title =
-    props.Title?.type === "title"
-      ? props.Title.title.map((t) => t.plain_text).join("")
-      : "";
-
-  const slug =
-    props.Slug?.type === "rich_text"
-      ? props.Slug.rich_text.map((t) => t.plain_text).join("")
-      : "";
-
-  const category =
-    props.Category?.type === "select"
-      ? (props.Category.select?.name ?? "")
-      : "";
-
-  const year =
-    props.Year?.type === "number"
-      ? (props.Year.number ?? undefined)
-      : undefined;
-
-  const coverImage = page.cover
-    ? page.cover.type === "external"
-      ? page.cover.external.url
-      : page.cover.file.url
-    : undefined;
-
-  return {
-    id: page.id,
-    slug,
-    title,
-    year,
-    category,
-    description: "",
-    images: [],
-    coverImage,
-  };
+  return { ...base, description, images, coverImage: base.coverImage ?? images[0] };
 }
