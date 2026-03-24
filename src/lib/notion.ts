@@ -26,9 +26,10 @@ type NotionPage = {
   cover: { type: string; external?: { url: string }; file?: { url: string } } | null;
   properties: {
     Title: { type: "title"; title: RichText };
-    Slug: { type: "rich_text"; rich_text: RichText };
+    Slug: { type: "rich_text" | "text"; rich_text: RichText };
     Category: { type: "select"; select: { name: string } | null };
     Year: { type: "number"; number: number | null };
+    CoverImage: { type: "url"; url: string | null };
   };
 };
 
@@ -69,11 +70,11 @@ function pageToProject(page: NotionPage): Project {
   const slug = props.Slug.rich_text.map((t) => t.plain_text).join("");
   const category = props.Category.select?.name ?? "";
   const year = props.Year.number ?? undefined;
-  const coverImage = page.cover
+  const coverImage = props.CoverImage?.url ?? (page.cover
     ? page.cover.type === "external"
       ? page.cover.external?.url
       : page.cover.file?.url
-    : undefined;
+    : undefined);
   return { id: page.id, slug, title, year, category, description: "", images: [], coverImage };
 }
 
