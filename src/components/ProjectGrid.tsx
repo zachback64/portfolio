@@ -12,7 +12,7 @@ interface Project {
 export default function ProjectGrid({ items }: { items: Project[] }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-gray-100">
-      {items.map((item) => (
+      {items.map((item, index) => (
         <Link
           key={item.slug}
           href={`/${item.category}/${item.slug}`}
@@ -23,6 +23,8 @@ export default function ProjectGrid({ items }: { items: Project[] }) {
               src={item.coverImage}
               alt={item.title}
               fill
+              sizes="(max-width: 768px) 50vw, 33vw"
+              priority={index < 6}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (

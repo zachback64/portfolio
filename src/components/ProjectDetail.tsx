@@ -44,6 +44,8 @@ export default function ProjectDetail({
                 src={src}
                 alt={`${item.title} ${i + 1}`}
                 fill
+                sizes="(max-width: 896px) 100vw, 896px"
+                priority={i === 0}
                 className="object-cover"
               />
             </div>
