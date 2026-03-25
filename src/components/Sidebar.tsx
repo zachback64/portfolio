@@ -29,7 +29,7 @@ export default function Sidebar({ sections }: { sections: NavSection[] }) {
           <div key={section.href}>
             <Link
               href={section.href}
-              className={`block py-0.5 text-[12px] tracking-wide transition-colors ${
+              className={`block py-0.5 text-[14px] tracking-wide transition-colors ${
                 isActive(section.href) && section.children.length === 0
                   ? "text-[#111]"
                   : section.children.length > 0 && isActive(section.href)
@@ -43,7 +43,7 @@ export default function Sidebar({ sections }: { sections: NavSection[] }) {
               <Link
                 key={child.href}
                 href={child.href}
-                className={`block py-0.5 pl-3 text-[11px] tracking-wide transition-colors ${
+                className={`block py-0.5 pl-3 text-[13px] tracking-wide transition-colors ${
                   isActive(child.href)
                     ? "text-[#111]"
                     : "text-[#aaa] hover:text-[#666]"
