@@ -78,6 +78,14 @@ function pageToProject(page: NotionPage): Project {
   return { id: page.id, slug, title, year, category, description: "", images: [], coverImage };
 }
 
+export async function getAllProjects(): Promise<Project[]> {
+  const pages = await queryDatabase(
+    { property: "Published", checkbox: { equals: true } },
+    [{ property: "Order", direction: "ascending" }]
+  );
+  return pages.map(pageToProject);
+}
+
 export async function getProjects(category: string): Promise<Project[]> {
   const pages = await queryDatabase(
     {
