@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-dm-sans);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #111111;
+  --background: oklch(98.5% 0.008 80);
+  --foreground: oklch(14% 0.012 60);
+  --accent: oklch(55% 0.10 45);
+  --separator: oklch(94% 0.006 70);
+  --text-secondary: oklch(42% 0.010 60);
+  --text-tertiary: oklch(62% 0.008 60);
 }
 
 body {

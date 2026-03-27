@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
+import { Fraunces, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { getAllProjects } from "@/lib/notion";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const revalidate = 3600;
 
@@ -39,8 +52,8 @@ export default async function RootLayout({
   ];
 
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-full text-[#111] bg-white font-sans antialiased">
+    <html lang="en" className={`h-full ${fraunces.variable} ${dmSans.variable}`}>
+      <body className="min-h-full font-sans antialiased">
         <div className="flex min-h-screen">
           <Sidebar sections={sections} />
           <main className="flex-1 min-w-0">{children}</main>

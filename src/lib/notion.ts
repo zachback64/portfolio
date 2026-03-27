@@ -1,6 +1,19 @@
+import fs from "fs";
+import path from "path";
+
 const token = process.env.NOTION_TOKEN!;
 const databaseId = process.env.NOTION_DATABASE_ID!;
 const API = "https://api.notion.com/v1";
+
+function localImagesForSlug(slug: string): string[] {
+  const dir = path.join(process.cwd(), "public", "images", slug);
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((f) => /\.(jpe?g|png|gif|webp|avif)$/i.test(f))
+    .sort()
+    .map((f) => `/images/${slug}/${f}`);
+}
 
 const headers = {
   Authorization: `Bearer ${token}`,
@@ -70,11 +83,12 @@ function pageToProject(page: NotionPage): Project {
   const slug = props.Slug.rich_text.map((t) => t.plain_text).join("");
   const category = props.Category.select?.name ?? "";
   const year = props.Year.number ?? undefined;
-  const coverImage = props.CoverImage?.url ?? (page.cover
+  const notionCover = props.CoverImage?.url ?? (page.cover
     ? page.cover.type === "external"
       ? page.cover.external?.url
       : page.cover.file?.url
     : undefined);
+  const coverImage = notionCover ?? localImagesForSlug(slug)[0];
   return { id: page.id, slug, title, year, category, description: "", images: [], coverImage };
 }
 
@@ -127,5 +141,8 @@ export async function getProject(slug: string): Promise<Project | null> {
   }
 
   const base = pageToProject(page);
-  return { ...base, description, images, coverImage: base.coverImage ?? images[0] };
+  const localImages = localImagesForSlug(base.slug);
+  const finalImages = images.length > 0 ? images : localImages;
+  const coverImage = base.coverImage ?? finalImages[0];
+  return { ...base, description, images: finalImages, coverImage };
 }
